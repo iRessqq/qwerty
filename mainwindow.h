@@ -20,6 +20,8 @@ private:
 
     bool connectToDb();
     void createTableIfNotExist();
+
+private slots:
     void saveToDb();
     void showAllActions();
 };
