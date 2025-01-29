@@ -39,16 +39,19 @@ bool MainWindow::connectToDb() {
         return false;
     }
 
+    createTableIfNotExist();
+
+    return true;
+}
+
+void MainWindow::createTableIfNotExist() {
     QSqlQuery query;
     if (!query.exec("CREATE TABLE IF NOT EXISTS actions ("
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, "
                     "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, "
                     "action TEXT)")) {
         qDebug() << "ошибка" << query.lastError().text();
-        return false;
     }
-
-    return true;
 }
 
 void MainWindow::saveToDb() {

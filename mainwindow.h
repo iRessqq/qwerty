@@ -19,6 +19,7 @@ private:
     QLineEdit *inputAction;
 
     bool connectToDb();
+    void createTableIfNotExist();
     void saveToDb();
     void showAllActions();
 };
