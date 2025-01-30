@@ -8,6 +8,9 @@
 #include <QSqlError>
 #include <QMessageBox>
 #include <QDebug>
+#include <QTableView>
+#include <QSqlTableModel>
+#include <QHeaderView>
 
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent) {
@@ -26,9 +29,19 @@ MainWindow::MainWindow(QWidget *parent)
     layout->addWidget(saveButton);
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveToDb);
 
-    QPushButton *viewButton = new QPushButton("показать все записи", this);
-    layout->addWidget(viewButton);
-    connect(viewButton, &QPushButton::clicked, this, &MainWindow::showAllActions);
+    tableView = new QTableView(this);
+    layout->addWidget(tableView);
+
+    model = new QSqlTableModel(this);
+    model->setTable("actions");
+    model->setEditStrategy(QSqlTableModel::OnFieldChange);
+
+    tableView->setModel(model);
+    tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    tableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+
+    model->select();
 }
 
 bool MainWindow::connectToDb() {
@@ -69,28 +82,13 @@ void MainWindow::saveToDb() {
 
     if (query.exec()) {
         inputAction->clear();
+        model->select();
     } else {
         QMessageBox::critical(this, "ошибка", "не сохранилось" + query.lastError().text());
     }
 }
 
 void MainWindow::showAllActions() {
-    QSqlQuery query("SELECT * FROM actions");
-
-    if (query.exec()) {
-        QString allActions;
-        while (query.next()) {
-            int id = query.value(0).toInt();
-            QString timestamp = query.value(1).toString();
-            QString action = query.value(2).toString();
-            allActions += QString("ID: %1, время: %2, действие: %3\n").arg(id).arg(timestamp).arg(action);
-        }
-        if (allActions.isEmpty()) {
-            allActions = "нет записей в базе данных.";
-        }
-        QMessageBox::information(this, "все действия", allActions);
-    } else {
-        QMessageBox::critical(this, "ошибка", "нет записей" + query.lastError().text());
-    }
+    model->select();
 }
 
