@@ -8,6 +8,8 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QMessageBox>
+#include <QTableView>
+#include <QSqlTableModel>
 
 class MainWindow : public QWidget {
     Q_OBJECT
@@ -17,9 +19,12 @@ public:
 
 private:
     QLineEdit *inputAction;
+    QTableView *tableView;
+    QSqlTableModel *model;
 
     bool connectToDb();
     void createTableIfNotExist();
+    void setupTableModel();
 
 private slots:
     void saveToDb();
