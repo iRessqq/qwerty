@@ -24,6 +24,7 @@ private:
 
     bool connectToDb();
     void createTableIfNotExist();
+    void setupTableModel();
 
 private slots:
     void saveToDb();

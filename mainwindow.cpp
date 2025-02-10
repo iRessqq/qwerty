@@ -32,22 +32,13 @@ MainWindow::MainWindow(QWidget *parent)
     tableView = new QTableView(this);
     layout->addWidget(tableView);
 
-    model = new QSqlTableModel(this);
-    model->setTable("actions");
-    model->setEditStrategy(QSqlTableModel::OnFieldChange);
-
-    tableView->setModel(model);
-    tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    tableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-
-    model->select();
+    setupTableModel();
+    showAllActions();
 }
 
 bool MainWindow::connectToDb() {
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     db.setDatabaseName("log.db");
-
     if (!db.open()) {
         qDebug() << "ошибка" << db.lastError().text();
         return false;
@@ -91,4 +82,17 @@ void MainWindow::saveToDb() {
 void MainWindow::showAllActions() {
     model->select();
 }
+
+void MainWindow::setupTableModel() {
+    model = new QSqlTableModel(this);
+    model->setTable("actions");
+    model->setEditStrategy(QSqlTableModel::OnFieldChange);
+
+    tableView->setModel(model);
+
+    tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    tableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+}
+
 
