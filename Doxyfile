@@ -1,0 +1,20 @@
+PROJECT_NAME           = "qwerty"
+PROJECT_BRIEF          = "журналирование действий оператора в базе данных и их отображение в таблице"
+OUTPUT_LANGUAGE        = Russian
+
+OUTPUT_DIRECTORY       = docs
+
+INPUT                  = mainwindow.cpp mainwindow.h main.cpp qwerty.pro
+
+GENERATE_HTML          = YES
+HTML_OUTPUT            = html
+DISABLE_INDEX          = NO
+
+EXTRACT_ALL            = YES
+HIDE_UNDOC_MEMBERS     = YES
+HIDE_UNDOC_CLASSES     = YES
+
+QUIET                  = YES
+WARN_IF_DOC_ERROR      = YES
+
+SHOW_FILES             = YES
