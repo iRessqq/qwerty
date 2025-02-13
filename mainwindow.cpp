@@ -6,6 +6,7 @@
 #include "mainwindow.h"
 
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QPushButton>
 #include <QLabel>
 #include <QSqlDatabase>
@@ -17,12 +18,14 @@
 #include <QSqlTableModel>
 #include <QHeaderView>
 
+#include <visa.h>
+
 /**
  * @brief конструктор MainWindow, создает интерфейс
  * @param parent родительский виджет
  */
 MainWindow::MainWindow(QWidget *parent)
-    : QWidget(parent) {
+    : QWidget(parent), tableView(nullptr), model(nullptr) {
 
     // проверка подключения к бд
     if (!connectToDb()) {
@@ -30,21 +33,45 @@ MainWindow::MainWindow(QWidget *parent)
         exit(1);
     }
 
-    // вертикальный layout
-    QVBoxLayout *layout = new QVBoxLayout(this);
+    // горизонтальный(основной) layout
+    QHBoxLayout *mainLayout = new QHBoxLayout(this);
 
-    // поле для ввода
+    // вертикальный(левый) layout
+    QVBoxLayout *leftLayout = new QVBoxLayout();
+
+    // поле для ввода комманды
+    commandInput = new QLineEdit(this);
+    leftLayout->addWidget(commandInput);
+
+    // кнопка отправки команды
+    QPushButton *generatorButton = new QPushButton("генератор", this);
+    leftLayout->addWidget(generatorButton);
+    connect(generatorButton, &QPushButton::clicked, this, &MainWindow::sendCommandToGenerator);
+
+    // поле для ответа генератора
+    responseOutput = new QPlainTextEdit(this);
+    responseOutput->setReadOnly(true);
+    leftLayout->addWidget(responseOutput);
+
+    // вертикальный(правый) layout
+    QVBoxLayout *rightLayout = new QVBoxLayout();
+
+    // поле для ввода действия
     inputAction = new QLineEdit(this);
-    layout->addWidget(inputAction);
+    rightLayout->addWidget(inputAction);
 
     // кнопка сохранения
     QPushButton *saveButton = new QPushButton("сохранить", this);
-    layout->addWidget(saveButton);
+    rightLayout->addWidget(saveButton);
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveToDb);
 
     // таблица для отображения данных
     tableView = new QTableView(this);
-    layout->addWidget(tableView);
+    rightLayout->addWidget(tableView);
+
+    // левый и правый layout в основной layout
+    mainLayout->addLayout(leftLayout, 1);
+    mainLayout->addLayout(rightLayout, 1);
 
     // настройка модели и заполнение таблицы
     setupTableModel();
@@ -109,16 +136,20 @@ void MainWindow::saveToDb() {
  * @brief обновление данных в таблице
  */
 void MainWindow::showAllActions() {
-    model->select();
+    if (model) {
+        model->select();
+    }
 }
 
 /**
  * @brief настраивает модель таблицы
  */
 void MainWindow::setupTableModel() {
-    model = new QSqlTableModel(this);
-    model->setTable("actions");
-    model->setEditStrategy(QSqlTableModel::OnFieldChange);
+    if (!model) {
+        model = new QSqlTableModel(this);
+        model->setTable("actions");
+        model->setEditStrategy(QSqlTableModel::OnFieldChange);
+    }
 
     tableView->setModel(model);
 
@@ -127,4 +158,49 @@ void MainWindow::setupTableModel() {
     tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
 }
 
+/**
+ * @brief отправка команды генератору и отображание ответа
+ */
+void MainWindow::sendCommandToGenerator() {
+    responseOutput->clear();
+
+    ViSession defaultRM, instr;
+    ViStatus status;
+
+    // открытие VISA
+    status = viOpenDefaultRM(&defaultRM);
+    if (status != VI_SUCCESS) {
+        responseOutput->setPlainText("не удалось открыть VISA");
+        return;
+    }
+
+    // подключение через порт
+    status = viOpen(defaultRM, "ASRL1::INSTR", VI_NULL, VI_NULL, &instr);
+    if (status != VI_SUCCESS) {
+        responseOutput->setPlainText("не удалось подключиться к генератору");
+        viClose(defaultRM);
+        return;
+    }
+
+    // получение команды(isempty *IDN?)
+    QString command = commandInput->text().isEmpty() ? "*IDN?" : commandInput->text();
+    viPrintf(instr, "%s\n", command.toUtf8().constData());
+    viFlush(instr, VI_WRITE_BUF);
+
+    // чтение ответа
+    char buffer[256];
+    ViUInt32 retCount;
+    status = viRead(instr, (ViBuf)buffer, sizeof(buffer) - 1, &retCount);
+
+    if (status != VI_SUCCESS) {
+        responseOutput->setPlainText("тайм-аут или нет ответа от генератора");
+    } else {
+        buffer[retCount] = '\0';  // завершение строки
+        responseOutput->setPlainText(QString("Ответ: ") + buffer);
+    }
+
+    // закрытие
+    viClose(instr);
+    viClose(defaultRM);
+}
 

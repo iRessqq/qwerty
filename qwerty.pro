@@ -7,6 +7,12 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 # поддержка C++17
 CONFIG += c++17
 
+# пути для заголовочных файлов NI-VISA
+INCLUDEPATH += /usr/include/ni-visa
+
+# библиотеки для работы с NI-VISA
+LIBS += -L/usr/lib/x86_64-linux-gnu -lvisa
+
 # исходные файлы
 SOURCES += \
     main.cpp \

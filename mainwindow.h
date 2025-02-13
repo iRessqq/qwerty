@@ -15,6 +15,7 @@
 #include <QMessageBox>
 #include <QTableView>
 #include <QSqlTableModel>
+#include <QPlainTextEdit>
 
 /**
  * @class MainWindow
@@ -36,6 +37,8 @@ private:
     QLineEdit *inputAction; ///< ввод действия
     QTableView *tableView; ///< отображение таблицы
     QSqlTableModel *model; ///< модель данных для таблицы
+    QLineEdit *commandInput;    ///< поле для ввода команды
+    QPlainTextEdit *responseOutput;  ///< поле для ответа генератора
 
     /**
      * @brief подключение к бд
@@ -62,6 +65,10 @@ private slots:
      * @brief обновление данных в таблице
      */
     void showAllActions();
+    /**
+     * @brief отправляет команду генератору
+     */
+    void sendCommandToGenerator();
 };
 
 #endif // MAINWINDOW_H
