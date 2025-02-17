@@ -4,7 +4,7 @@ OUTPUT_LANGUAGE        = Russian
 
 OUTPUT_DIRECTORY       = docs
 
-INPUT                  = mainwindow.cpp mainwindow.h main.cpp qwerty.pro
+INPUT                  = mainwindow.cpp mainwindow.h main.cpp visa_controller.cpp visa_controller.h status_checker.cpp status_checker.h
 
 GENERATE_HTML          = YES
 HTML_OUTPUT            = html

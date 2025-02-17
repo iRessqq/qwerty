@@ -8,25 +8,25 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 CONFIG += c++17
 
 # пути для заголовочных файлов NI-VISA
-INCLUDEPATH += /usr/include/ni-visa
+INCLUDEPATH += $$PWD/ni-visa/include/ni-visa
 
 # библиотеки для работы с NI-VISA
-LIBS += -L/usr/lib/x86_64-linux-gnu -lvisa
+LIBS += -L$$PWD/ni-visa/lib -lvisa
 
 # исходные файлы
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    status_checker.cpp \
+    visa_controller.cpp
 
 # заголовочные файлы
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    status_checker.h \
+    visa_controller.h
 
 # ui файл
 FORMS += \
     mainwindow.ui
 
-# путь для установки
-qnx: target.path = /tmp/$${TARGET}/bin
-else: unix:!android: target.path = /opt/$${TARGET}/bin
-!isEmpty(target.path): INSTALLS += target

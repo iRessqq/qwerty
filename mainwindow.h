@@ -39,6 +39,7 @@ private:
     QSqlTableModel *model; ///< модель данных для таблицы
     QLineEdit *commandInput;    ///< поле для ввода команды
     QPlainTextEdit *responseOutput;  ///< поле для ответа генератора
+    QLabel *statusLabel; ///< статус соединения
 
     /**
      * @brief подключение к бд

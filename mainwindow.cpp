@@ -4,6 +4,8 @@
  */
 
 #include "mainwindow.h"
+#include "status_checker.h"
+#include "visa_controller.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -14,11 +16,8 @@
 #include <QSqlError>
 #include <QMessageBox>
 #include <QDebug>
-#include <QTableView>
 #include <QSqlTableModel>
 #include <QHeaderView>
-
-#include <visa.h>
 
 /**
  * @brief конструктор MainWindow, создает интерфейс
@@ -76,6 +75,21 @@ MainWindow::MainWindow(QWidget *parent)
     // настройка модели и заполнение таблицы
     setupTableModel();
     showAllActions();
+
+    // создание метки для отображения статуса соединения
+    statusLabel = new QLabel("проверка...", this);
+    leftLayout->addWidget(statusLabel);
+
+    // создание объекта проверки соединения
+    StatusChecker *checker = new StatusChecker(this);
+
+    // подключение сигнала от StatusChecker к QLabel
+    connect(checker, &StatusChecker::statusChanged, this, [this](bool connected) {
+        statusLabel->setText(connected ? "подключен" : "отключен");
+    });
+
+    // запуск потока
+    checker->start();
 }
 
 /**
@@ -132,14 +146,6 @@ void MainWindow::saveToDb() {
     }
 }
 
-/**
- * @brief обновление данных в таблице
- */
-void MainWindow::showAllActions() {
-    if (model) {
-        model->select();
-    }
-}
 
 /**
  * @brief настраивает модель таблицы
@@ -152,55 +158,32 @@ void MainWindow::setupTableModel() {
     }
 
     tableView->setModel(model);
-
-    tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    tableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
+
 
 /**
  * @brief отправка команды генератору и отображание ответа
  */
 void MainWindow::sendCommandToGenerator() {
     responseOutput->clear();
+    VisaController visa;
 
-    ViSession defaultRM, instr;
-    ViStatus status;
-
-    // открытие VISA
-    status = viOpenDefaultRM(&defaultRM);
-    if (status != VI_SUCCESS) {
-        responseOutput->setPlainText("не удалось открыть VISA");
-        return;
-    }
-
-    // подключение через порт
-    status = viOpen(defaultRM, "ASRL1::INSTR", VI_NULL, VI_NULL, &instr);
-    if (status != VI_SUCCESS) {
-        responseOutput->setPlainText("не удалось подключиться к генератору");
-        viClose(defaultRM);
-        return;
-    }
-
-    // получение команды(isempty *IDN?)
     QString command = commandInput->text().isEmpty() ? "*IDN?" : commandInput->text();
-    viPrintf(instr, "%s\n", command.toUtf8().constData());
-    viFlush(instr, VI_WRITE_BUF);
+    QString response = visa.sendCommand(command);
 
-    // чтение ответа
-    char buffer[256];
-    ViUInt32 retCount;
-    status = viRead(instr, (ViBuf)buffer, sizeof(buffer) - 1, &retCount);
-
-    if (status != VI_SUCCESS) {
-        responseOutput->setPlainText("тайм-аут или нет ответа от генератора");
+    if (response.isEmpty() && !command.contains("?")) {
+        responseOutput->setPlainText("команда отправлена:)");
+    } else if (response.isEmpty()) {
+        responseOutput->setPlainText("генератор не отвечает");
     } else {
-        buffer[retCount] = '\0';  // завершение строки
-        responseOutput->setPlainText(QString("Ответ: ") + buffer);
+        responseOutput->setPlainText("ответ: " + response);
     }
-
-    // закрытие
-    viClose(instr);
-    viClose(defaultRM);
 }
 
+/**
+ * @brief обновление данных в таблице
+ */
+void MainWindow::showAllActions() {
+    model->select();
+}
