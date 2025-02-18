@@ -19,14 +19,14 @@ QString VisaController::sendCommand(const QString &command) {
     // открытие VISA
     status = viOpenDefaultRM(&defaultRM);
     if (status != VI_SUCCESS) {
-        return "не удалось открыть VISA";
+        return "Не удалось установить соединение с VISA(проверить драйвер)";
     }
 
     // подключение через порт
     status = viOpen(defaultRM, "ASRL1::INSTR", VI_NULL, VI_NULL, &instr);
     if (status != VI_SUCCESS) {
         viClose(defaultRM);
-        return "не удалось подключиться к генератору";
+        return "Не удалось подключиться к генератору";
     }
 
     // отправка команды на генератор

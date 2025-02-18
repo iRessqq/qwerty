@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     // горизонтальный(основной) layout
-    QHBoxLayout *mainLayout = new QHBoxLayout(this);
+    QHBoxLayout *mainLayout = new QHBoxLayout();
 
     // вертикальный(левый) layout
     QVBoxLayout *leftLayout = new QVBoxLayout();
@@ -43,7 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
     leftLayout->addWidget(commandInput);
 
     // кнопка отправки команды
-    QPushButton *generatorButton = new QPushButton("генератор", this);
+    QPushButton *generatorButton = new QPushButton("Генератор", this);
     leftLayout->addWidget(generatorButton);
     connect(generatorButton, &QPushButton::clicked, this, &MainWindow::sendCommandToGenerator);
 
@@ -60,13 +60,24 @@ MainWindow::MainWindow(QWidget *parent)
     rightLayout->addWidget(inputAction);
 
     // кнопка сохранения
-    QPushButton *saveButton = new QPushButton("сохранить", this);
+    QPushButton *saveButton = new QPushButton("Сохранить", this);
     rightLayout->addWidget(saveButton);
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveToDb);
 
     // таблица для отображения данных
     tableView = new QTableView(this);
     rightLayout->addWidget(tableView);
+
+    // layout для статуса генератора
+    QHBoxLayout *statusLayout = new QHBoxLayout();
+    statusLabel = new QLabel("Проверка...", this);
+    statusLayout->addStretch(); // сдвиг
+    statusLayout->addWidget(statusLabel);
+
+    // вертикальный layout со всем
+    QVBoxLayout *mainVerticalLayout = new QVBoxLayout(this);
+    mainVerticalLayout->addLayout(mainLayout);
+    mainVerticalLayout->addLayout(statusLayout);
 
     // левый и правый layout в основной layout
     mainLayout->addLayout(leftLayout, 1);
@@ -76,16 +87,12 @@ MainWindow::MainWindow(QWidget *parent)
     setupTableModel();
     showAllActions();
 
-    // создание метки для отображения статуса соединения
-    statusLabel = new QLabel("проверка...", this);
-    leftLayout->addWidget(statusLabel);
-
     // создание объекта проверки соединения
     StatusChecker *checker = new StatusChecker(this);
 
     // подключение сигнала от StatusChecker к QLabel
     connect(checker, &StatusChecker::statusChanged, this, [this](bool connected) {
-        statusLabel->setText(connected ? "подключен" : "отключен");
+        statusLabel->setText(connected ? "Подключен" : "Отключен");
     });
 
     // запуск потока
@@ -173,11 +180,11 @@ void MainWindow::sendCommandToGenerator() {
     QString response = visa.sendCommand(command);
 
     if (response.isEmpty() && !command.contains("?")) {
-        responseOutput->setPlainText("команда отправлена:)");
+        responseOutput->setPlainText("Команда отправлена:)");
     } else if (response.isEmpty()) {
-        responseOutput->setPlainText("генератор не отвечает");
+        responseOutput->setPlainText("Генератор не отвечает");
     } else {
-        responseOutput->setPlainText("ответ: " + response);
+        responseOutput->setPlainText("Ответ: " + response);
     }
 }
 
