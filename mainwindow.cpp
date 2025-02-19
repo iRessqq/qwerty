@@ -4,8 +4,11 @@
  */
 
 #include "mainwindow.h"
+#include "status_checker.h"
+#include "visa_controller.h"
 
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QPushButton>
 #include <QLabel>
 #include <QSqlDatabase>
@@ -13,7 +16,6 @@
 #include <QSqlError>
 #include <QMessageBox>
 #include <QDebug>
-#include <QTableView>
 #include <QSqlTableModel>
 #include <QHeaderView>
 
@@ -22,7 +24,7 @@
  * @param parent родительский виджет
  */
 MainWindow::MainWindow(QWidget *parent)
-    : QWidget(parent) {
+    : QWidget(parent), tableView(nullptr), model(nullptr) {
 
     // проверка подключения к бд
     if (!connectToDb()) {
@@ -30,25 +32,71 @@ MainWindow::MainWindow(QWidget *parent)
         exit(1);
     }
 
-    // вертикальный layout
-    QVBoxLayout *layout = new QVBoxLayout(this);
+    // горизонтальный(основной) layout
+    QHBoxLayout *mainLayout = new QHBoxLayout();
 
-    // поле для ввода
+    // вертикальный(левый) layout
+    QVBoxLayout *leftLayout = new QVBoxLayout();
+
+    // поле для ввода комманды
+    commandInput = new QLineEdit(this);
+    leftLayout->addWidget(commandInput);
+
+    // кнопка отправки команды
+    QPushButton *generatorButton = new QPushButton("Генератор", this);
+    leftLayout->addWidget(generatorButton);
+    connect(generatorButton, &QPushButton::clicked, this, &MainWindow::sendCommandToGenerator);
+
+    // поле для ответа генератора
+    responseOutput = new QPlainTextEdit(this);
+    responseOutput->setReadOnly(true);
+    leftLayout->addWidget(responseOutput);
+
+    // вертикальный(правый) layout
+    QVBoxLayout *rightLayout = new QVBoxLayout();
+
+    // поле для ввода действия
     inputAction = new QLineEdit(this);
-    layout->addWidget(inputAction);
+    rightLayout->addWidget(inputAction);
 
     // кнопка сохранения
-    QPushButton *saveButton = new QPushButton("сохранить", this);
-    layout->addWidget(saveButton);
+    QPushButton *saveButton = new QPushButton("Сохранить", this);
+    rightLayout->addWidget(saveButton);
     connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveToDb);
 
     // таблица для отображения данных
     tableView = new QTableView(this);
-    layout->addWidget(tableView);
+    rightLayout->addWidget(tableView);
+
+    // layout для статуса генератора
+    QHBoxLayout *statusLayout = new QHBoxLayout();
+    statusLabel = new QLabel("Проверка...", this);
+    statusLayout->addStretch(); // сдвиг
+    statusLayout->addWidget(statusLabel);
+
+    // вертикальный layout со всем
+    QVBoxLayout *mainVerticalLayout = new QVBoxLayout(this);
+    mainVerticalLayout->addLayout(mainLayout);
+    mainVerticalLayout->addLayout(statusLayout);
+
+    // левый и правый layout в основной layout
+    mainLayout->addLayout(leftLayout, 1);
+    mainLayout->addLayout(rightLayout, 1);
 
     // настройка модели и заполнение таблицы
     setupTableModel();
     showAllActions();
+
+    // создание объекта проверки соединения
+    StatusChecker *checker = new StatusChecker(this);
+
+    // подключение сигнала от StatusChecker к QLabel
+    connect(checker, &StatusChecker::statusChanged, this, [this](bool connected) {
+        statusLabel->setText(connected ? "Подключен" : "Отключен");
+    });
+
+    // запуск потока
+    checker->start();
 }
 
 /**
@@ -105,26 +153,44 @@ void MainWindow::saveToDb() {
     }
 }
 
+
+/**
+ * @brief настраивает модель таблицы
+ */
+void MainWindow::setupTableModel() {
+    if (!model) {
+        model = new QSqlTableModel(this);
+        model->setTable("actions");
+        model->setEditStrategy(QSqlTableModel::OnFieldChange);
+    }
+
+    tableView->setModel(model);
+    tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+}
+
+
+/**
+ * @brief отправка команды генератору и отображание ответа
+ */
+void MainWindow::sendCommandToGenerator() {
+    responseOutput->clear();
+    VisaController visa;
+
+    QString command = commandInput->text().isEmpty() ? "*IDN?" : commandInput->text();
+    QString response = visa.sendCommand(command);
+
+    if (response.isEmpty() && !command.contains("?")) {
+        responseOutput->setPlainText("Команда отправлена:)");
+    } else if (response.isEmpty()) {
+        responseOutput->setPlainText("Генератор не отвечает");
+    } else {
+        responseOutput->setPlainText("Ответ: " + response);
+    }
+}
+
 /**
  * @brief обновление данных в таблице
  */
 void MainWindow::showAllActions() {
     model->select();
 }
-
-/**
- * @brief настраивает модель таблицы
- */
-void MainWindow::setupTableModel() {
-    model = new QSqlTableModel(this);
-    model->setTable("actions");
-    model->setEditStrategy(QSqlTableModel::OnFieldChange);
-
-    tableView->setModel(model);
-
-    tableView->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
-    tableView->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
-    tableView->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
-}
-
-
