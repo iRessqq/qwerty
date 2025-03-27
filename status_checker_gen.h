@@ -1,22 +1,52 @@
-#ifndef STATUS_CHECKER_H
-#define STATUS_CHECKER_H
+#ifndef STATUS_CHECKER_GEN_H
+#define STATUS_CHECKER_GEN_H
 
-#include <QObject>
 #include <QThread>
 #include <visa.h>
 
 /**
- * @brief проверка связи с генератором в отдельном потоке
+ * @class StatusCheckerGen
+ * @brief класс для проверки состояния соединения с генератором
  */
-class StatusChecker : public QThread {
+class StatusCheckerGen : public QThread
+{
     Q_OBJECT
 
 public:
-    explicit StatusChecker(QObject *parent = nullptr);
-    void run() override; ///< запуск потока
+    /**
+     * @brief конструктор StatusCheckerGen
+     * @param parent родительский объект
+     */
+    explicit StatusCheckerGen(QObject *parent = nullptr);
+
+    /**
+     * @brief деструктор StatusCheckerGen
+     */
+    ~StatusCheckerGen();
 
 signals:
-    void statusChanged(bool isConnected); ///< сигнал при изменении статуса
+    /**
+     * @brief сигнал при успешном подключении генератора
+     */
+    void connectionDetected();
+
+    /**
+     * @brief сигнал при потере соединения с генератором
+     */
+    void connectionLost();
+
+protected:
+    /**
+     * @brief основной поток проверки состояния
+     */
+    void run() override;
+
+private:
+    /**
+     * @brief проверяет подключение к генератору
+     * @return true если генератор подключён, false в противном случае
+     */
+    bool isConnected();
 };
 
-#endif // STATUS_CHECKER_H
+#endif // STATUS_CHECKER_GEN_H
