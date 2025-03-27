@@ -15,18 +15,27 @@ LIBS += -L$$PWD/ni-visa/lib -lvisa
 
 # исходные файлы
 SOURCES += \
+    generator_manager.cpp \
+    generator_widget.cpp \
+    history_window.cpp \
     main.cpp \
     mainwindow.cpp \
-    status_checker.cpp \
-    visa_controller.cpp
+    oscilloscope_manager.cpp \
+    oscilloscope_widget.cpp \
+    status_checker_gen.cpp \
+    status_checker_osc.cpp
 
 # заголовочные файлы
 HEADERS += \
+    generator_manager.h \
+    generator_widget.h \
+    history_window.h \
     mainwindow.h \
-    status_checker.h \
-    visa_controller.h
+    oscilloscope_manager.h \
+    oscilloscope_widget.h \
+    status_checker_gen.h \
+    status_checker_osc.h
 
 # ui файл
-FORMS += \
-    mainwindow.ui
+FORMS +=
 
