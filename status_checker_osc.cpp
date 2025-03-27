@@ -50,7 +50,7 @@ void StatusCheckerOsc::run()
             oscilloscope.writeData(sockfd, outbuf);   // отправляем команду
             oscilloscope.readData(sockfd, inbuf, sizeof(inbuf), MAX_TCP_READ);  // читаем ответ
 
-            if (strlen(inbuf) == 0)  // Если нет ответа -соединение
+            if (strlen(inbuf) == 0)  // если нет ответа -соединение
             {
                 qDebug() << "3";
                 emit connectionLost();  // -соединения

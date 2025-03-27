@@ -36,6 +36,3 @@ HEADERS += \
     status_checker_gen.h \
     status_checker_osc.h
 
-# ui файл
-FORMS +=
-
