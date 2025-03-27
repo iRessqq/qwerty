@@ -1,75 +1,86 @@
-/**
- * @file mainwindow.h
- * @brief заголовочный файл
- */
-
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QWidget>
+#include <QTabWidget>
+#include <QLabel>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QPushButton>
-#include <QSqlDatabase>
-#include <QSqlQuery>
-#include <QSqlError>
-#include <QMessageBox>
-#include <QTableView>
-#include <QSqlTableModel>
-#include <QPlainTextEdit>
+#include <QMenuBar>
+#include <QMenu>
+#include <QAction>
+#include <QDebug>
+
+#include "oscilloscope_widget.h"
+#include "generator_widget.h"
+#include "history_window.h"
+#include "generator_manager.h"
+#include "status_checker_gen.h"
 
 /**
  * @class MainWindow
  * @brief главное окно приложения
- *
- * интерфейс для взаимодействия с бд и отображения данных в таблице
  */
-class MainWindow : public QWidget {
+class MainWindow : public QWidget
+{
     Q_OBJECT
 
 public:
     /**
-     * @brief конструктор класса MainWindow
+     * @brief конструктор MainWindow
      * @param parent родительский виджет
      */
     explicit MainWindow(QWidget *parent = nullptr);
 
-private:
-    QLineEdit *inputAction; ///< ввод действия
-    QTableView *tableView; ///< отображение таблицы
-    QSqlTableModel *model; ///< модель данных для таблицы
-    QLineEdit *commandInput;    ///< поле для ввода команды
-    QPlainTextEdit *responseOutput;  ///< поле для ответа генератора
-    QLabel *statusLabel; ///< статус соединения
-
-    /**
-     * @brief подключение к бд
-     * @return true - успешно, false - error
-     */
-    bool connectToDb();
-
-    /**
-     * @brief создание таблицы, если ее не существует
-     */
-    void createTableIfNotExist();
-
-    /**
-     * @brief настройка модели таблицы
-     */
-    void setupTableModel();
-
 private slots:
     /**
-     * @brief сохранение действия в бд
+     * @brief открывает окно истории действий
      */
-    void saveToDb();
+    void openHistoryWindow();
+
     /**
-     * @brief обновление данных в таблице
+     * @brief обработчик нажатия кнопки подключения
      */
-    void showAllActions();
+    void onConnectionButtonClicked();
+
+private:
     /**
-     * @brief отправляет команду генератору
+     * @brief инициализирует главное окно
      */
-    void sendCommandToGenerator();
+    void showMainWidget();
+
+    /**
+     * @brief отображает вкладку осциллографа
+     */
+    void showOscilloscopeWidget();
+
+    /**
+     * @brief отображает вкладку генератора
+     */
+    void showGeneratorWidget();
+
+    /**
+     * @brief скрывает вкладку осциллографа
+     */
+    void hideOscilloscopeWidget();
+
+    /**
+     * @brief скрывает вкладку генератора
+     */
+    void hideGeneratorWidget();
+
+    QVBoxLayout *mainLayout; ///< основной макет главного окна
+    QLabel *typeOfConnectionLabel; ///< метка для ввода типа подключения
+    QLineEdit *typeOfConnectionEdit; ///< поле ввода для типа подключения
+    QPushButton *connectionButton; ///< кнопка для установления соединения
+    QTabWidget *tabWidget; ///< вкладки осциллографа и генератора
+    QMenuBar *menuBar; ///< меню главного окна
+    HistoryWindow *historyWindow; ///< окно истории действий
+    OscilloscopeWidget *oscilloscopeWidget; ///< виджет осциллографа
+    GeneratorWidget *generatorWidget; ///< виджет генератора
+    GeneratorManager *generatorManager; ///< объект для управления генератором
+    StatusCheckerGen *statusCheckerGen; ///< поток для проверки состояния генератора
 };
 
 #endif // MAINWINDOW_H
