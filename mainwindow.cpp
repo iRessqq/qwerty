@@ -3,23 +3,25 @@
 #include "status_checker_osc.h"
 #include "generator_manager.h"
 #include "status_checker_gen.h"
+
 #include <QDebug>
 
 /**
- * @brief Конструктор MainWindow
- * @param parent Родительский виджет
- *
- * инициализирует главный виджет, настраивает и подключает сигналы для кнопки подключения и поля ввода типа подключения
+ * @brief конструктор MainWindow
+ * @param parent родительский виджет
  */
 MainWindow::MainWindow(QWidget *parent)
     : QWidget(parent),
     historyWindow(nullptr),
     generatorManager(nullptr),
-    statusCheckerGen(nullptr)
+    statusCheckerGen(nullptr),
+    statusCheckerStm(nullptr)
 {
     showMainWidget();
     connect(connectionButton, &QPushButton::clicked, this, &MainWindow::onConnectionButtonClicked);
     connect(typeOfConnectionEdit, &QLineEdit::returnPressed, this, &MainWindow::onConnectionButtonClicked);
+    resize(301, 600); //жижа
+    //adjustSize();
 }
 
 /**
@@ -43,18 +45,21 @@ void MainWindow::showMainWidget()
 
     oscilloscopeWidget = new OscilloscopeWidget();
     generatorWidget = new GeneratorWidget();
+    stmWidget = new StmWidget();
 
     tabWidget = new QTabWidget(this);
     tabWidget->addTab(generatorWidget, "Генератор");
     tabWidget->addTab(oscilloscopeWidget, "Осциллограф");
+    tabWidget->addTab(stmWidget, "Плата");
 
     mainLayout->addWidget(typeOfConnectionLabel);
     mainLayout->addWidget(typeOfConnectionEdit);
     mainLayout->addWidget(connectionButton);
     mainLayout->addWidget(tabWidget);
 
-    tabWidget->setTabEnabled(1, false);
-    tabWidget->setTabEnabled(0, false);
+    tabWidget->setTabEnabled(0, false); // генератор
+    tabWidget->setTabEnabled(1, false); // осциллограф
+    tabWidget->setTabEnabled(2, false); // плата
 }
 
 /**
@@ -71,6 +76,14 @@ void MainWindow::hideOscilloscopeWidget()
 void MainWindow::hideGeneratorWidget()
 {
     tabWidget->setTabEnabled(0, false);
+}
+
+/**
+ * @brief скрытие виджета платы
+ */
+void MainWindow::hideStmWidget()
+{
+    tabWidget->setTabEnabled(2, false);
 }
 
 /**
@@ -92,42 +105,67 @@ void MainWindow::showOscilloscopeWidget()
 }
 
 /**
+ * @brief отображение виджета платы
+ */
+void MainWindow::showStmWidget()
+{
+    tabWidget->setTabEnabled(2, true);
+    tabWidget->setCurrentIndex(2);
+}
+
+/**
  * @brief обработчик нажатия кнопки подключения, проверка типа подключения и запуск статус чекера
  */
 void MainWindow::onConnectionButtonClicked()
 {
-    QString str_typeOfConnection = typeOfConnectionEdit->text();
+    QString connType = typeOfConnectionEdit->text().trimmed();
     OscilloscopeManager oscManager;
     QString oscilloscopeIP = oscManager.getIp();
 
-    // подключение осциллографа
-    if (oscilloscopeIP == str_typeOfConnection)
+    if (connType == oscilloscopeIP)
     {
-        StatusCheckerOsc *statusCheckerOsc = new StatusCheckerOsc(str_typeOfConnection);
-        statusCheckerOsc->start();
+        auto *statusCheckerOsc = new StatusCheckerOsc(connType);
         connect(statusCheckerOsc, &StatusCheckerOsc::connectionDetected, this, &MainWindow::showOscilloscopeWidget);
         connect(statusCheckerOsc, &StatusCheckerOsc::connectionLost, this, &MainWindow::hideOscilloscopeWidget);
+        statusCheckerOsc->start();
     }
-    // подключение генератора
-    else if (str_typeOfConnection == "ASRL1::INSTR")
+    else if (connType == "ASRL33::INSTR")
     {
-        if (!generatorManager) {
+        if (!generatorManager)
             generatorManager = new GeneratorManager();
-        }
 
         QString response = generatorManager->sendCommand("*IDN?");
-        if (!response.contains("Не удалось")) { // проверка успешного ответа
+        if (!response.contains("Не удалось"))
+        {
             showGeneratorWidget();
-
-            if (!statusCheckerGen) {
+            if (!statusCheckerGen)
+            {
                 statusCheckerGen = new StatusCheckerGen();
                 connect(statusCheckerGen, &StatusCheckerGen::connectionDetected, this, &MainWindow::showGeneratorWidget);
                 connect(statusCheckerGen, &StatusCheckerGen::connectionLost, this, &MainWindow::hideGeneratorWidget);
                 statusCheckerGen->start();
             }
-        } else {
-            qDebug() << "Ошибка: " << response;
         }
+        else
+        {
+            qDebug() << "Ошибка генератора: " << response;
+        }
+    }
+
+    else if (connType == "/dev/ttyUSB0") {
+        if (!statusCheckerStm) {
+            statusCheckerStm = new StatusCheckerStm("/dev/ttyUSB0", this);
+            connect(statusCheckerStm, &StatusCheckerStm::connectionDetected,
+                    this, &MainWindow::showStmWidget);
+            connect(statusCheckerStm, &StatusCheckerStm::connectionLost,
+                    this, &MainWindow::hideStmWidget);
+            statusCheckerStm->start();
+        }
+    }
+
+    else
+    {
+        qDebug() << "Неизвестный тип подключения: " << connType;
     }
 }
 
