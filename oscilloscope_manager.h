@@ -13,7 +13,7 @@
 
 #include <QString>
 
-#define OUR_SCOPE_IP                  "192.168.74.20"
+#define OUR_SCOPE_IP                  "172.18.56.236"
 #define LECROY_SERVER_PORT            1861
 
 #define CMD_BUF_LEN                   8192
