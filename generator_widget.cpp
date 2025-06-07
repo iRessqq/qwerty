@@ -1,4 +1,5 @@
 #include "generator_widget.h"
+#include "history_window.h"
 
 /**
  * @brief конструктор GeneratorWidget.
@@ -45,4 +46,11 @@ void GeneratorWidget::onSendButtonClicked()
 
     QString response = generatorManager.sendCommand(command); // отправляем команду
     text->appendPlainText(response); // отображаем ответ от генератора
+
+    //лог управления в бд
+    HistoryWindow::logCommand(
+                command,
+                response,
+                QStringLiteral("Generator")
+                );
 }
