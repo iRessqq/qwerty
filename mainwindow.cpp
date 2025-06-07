@@ -1,196 +1,146 @@
-/**
- * @file mainwindow.cpp
- * @brief реализация класса MainWindow
- */
-
 #include "mainwindow.h"
-#include "status_checker.h"
-#include "visa_controller.h"
-
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QPushButton>
-#include <QLabel>
-#include <QSqlDatabase>
-#include <QSqlQuery>
-#include <QSqlError>
-#include <QMessageBox>
+#include "oscilloscope_manager.h"
+#include "status_checker_osc.h"
+#include "generator_manager.h"
+#include "status_checker_gen.h"
 #include <QDebug>
-#include <QSqlTableModel>
-#include <QHeaderView>
 
 /**
- * @brief конструктор MainWindow, создает интерфейс
- * @param parent родительский виджет
+ * @brief Конструктор MainWindow
+ * @param parent Родительский виджет
+ *
+ * инициализирует главный виджет, настраивает и подключает сигналы для кнопки подключения и поля ввода типа подключения
  */
 MainWindow::MainWindow(QWidget *parent)
-    : QWidget(parent), tableView(nullptr), model(nullptr) {
-
-    // проверка подключения к бд
-    if (!connectToDb()) {
-        QMessageBox::critical(this, "ошибка", "не подключен к бд");
-        exit(1);
-    }
-
-    // горизонтальный(основной) layout
-    QHBoxLayout *mainLayout = new QHBoxLayout();
-
-    // вертикальный(левый) layout
-    QVBoxLayout *leftLayout = new QVBoxLayout();
-
-    // поле для ввода комманды
-    commandInput = new QLineEdit(this);
-    leftLayout->addWidget(commandInput);
-
-    // кнопка отправки команды
-    QPushButton *generatorButton = new QPushButton("Генератор", this);
-    leftLayout->addWidget(generatorButton);
-    connect(generatorButton, &QPushButton::clicked, this, &MainWindow::sendCommandToGenerator);
-
-    // поле для ответа генератора
-    responseOutput = new QPlainTextEdit(this);
-    responseOutput->setReadOnly(true);
-    leftLayout->addWidget(responseOutput);
-
-    // вертикальный(правый) layout
-    QVBoxLayout *rightLayout = new QVBoxLayout();
-
-    // поле для ввода действия
-    inputAction = new QLineEdit(this);
-    rightLayout->addWidget(inputAction);
-
-    // кнопка сохранения
-    QPushButton *saveButton = new QPushButton("Сохранить", this);
-    rightLayout->addWidget(saveButton);
-    connect(saveButton, &QPushButton::clicked, this, &MainWindow::saveToDb);
-
-    // таблица для отображения данных
-    tableView = new QTableView(this);
-    rightLayout->addWidget(tableView);
-
-    // layout для статуса генератора
-    QHBoxLayout *statusLayout = new QHBoxLayout();
-    statusLabel = new QLabel("Проверка...", this);
-    statusLayout->addStretch(); // сдвиг
-    statusLayout->addWidget(statusLabel);
-
-    // вертикальный layout со всем
-    QVBoxLayout *mainVerticalLayout = new QVBoxLayout(this);
-    mainVerticalLayout->addLayout(mainLayout);
-    mainVerticalLayout->addLayout(statusLayout);
-
-    // левый и правый layout в основной layout
-    mainLayout->addLayout(leftLayout, 1);
-    mainLayout->addLayout(rightLayout, 1);
-
-    // настройка модели и заполнение таблицы
-    setupTableModel();
-    showAllActions();
-
-    // создание объекта проверки соединения
-    StatusChecker *checker = new StatusChecker(this);
-
-    // подключение сигнала от StatusChecker к QLabel
-    connect(checker, &StatusChecker::statusChanged, this, [this](bool connected) {
-        statusLabel->setText(connected ? "Подключен" : "Отключен");
-    });
-
-    // запуск потока
-    checker->start();
+    : QWidget(parent),
+    historyWindow(nullptr),
+    generatorManager(nullptr),
+    statusCheckerGen(nullptr)
+{
+    showMainWidget();
+    connect(connectionButton, &QPushButton::clicked, this, &MainWindow::onConnectionButtonClicked);
+    connect(typeOfConnectionEdit, &QLineEdit::returnPressed, this, &MainWindow::onConnectionButtonClicked);
 }
 
 /**
- * @brief подключение к бд
- * @return true - успешно, false - error
+ * @brief инициализация главного виджета
  */
-bool MainWindow::connectToDb() {
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    db.setDatabaseName("log.db");
-    if (!db.open()) {
-        qDebug() << "ошибка" << db.lastError().text();
-        return false;
-    }
+void MainWindow::showMainWidget()
+{
+    mainLayout = new QVBoxLayout(this);
 
-    //создание таблицы, если ее нет
-    createTableIfNotExist();
+    menuBar = new QMenuBar(this);
+    QMenu *historyMenu = new QMenu("Меню", this);
+    QAction *openHistoryAction = new QAction("История", this);
+    connect(openHistoryAction, &QAction::triggered, this, &MainWindow::openHistoryWindow);
+    historyMenu->addAction(openHistoryAction);
+    menuBar->addMenu(historyMenu);
+    mainLayout->setMenuBar(menuBar);
 
-    return true;
+    typeOfConnectionLabel = new QLabel("Тип подключения", this);
+    typeOfConnectionEdit = new QLineEdit(this);
+    connectionButton = new QPushButton("Подключиться", this);
+
+    oscilloscopeWidget = new OscilloscopeWidget();
+    generatorWidget = new GeneratorWidget();
+
+    tabWidget = new QTabWidget(this);
+    tabWidget->addTab(generatorWidget, "Генератор");
+    tabWidget->addTab(oscilloscopeWidget, "Осциллограф");
+
+    mainLayout->addWidget(typeOfConnectionLabel);
+    mainLayout->addWidget(typeOfConnectionEdit);
+    mainLayout->addWidget(connectionButton);
+    mainLayout->addWidget(tabWidget);
+
+    tabWidget->setTabEnabled(1, false);
+    tabWidget->setTabEnabled(0, false);
 }
 
 /**
-* @brief создание таблицы, если ее не существует
+ * @brief скрытие виджета осциллографа
  */
-void MainWindow::createTableIfNotExist() {
-    QSqlQuery query;
-    if (!query.exec("CREATE TABLE IF NOT EXISTS actions ("
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                    "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, "
-                    "action TEXT)")) {
-        qDebug() << "ошибка" << query.lastError().text();
-    }
+void MainWindow::hideOscilloscopeWidget()
+{
+    tabWidget->setTabEnabled(1, false);
 }
 
 /**
- * @brief сохранение действия в бд
+ * @brief скрытие виджета генератора
  */
-void MainWindow::saveToDb() {
-    QString actionText = inputAction->text();
-
-    if (actionText.isEmpty()) {
-        QMessageBox::warning(this, "ошибка", "пустое поле");
-        return;
-    }
-
-    QSqlQuery query;
-    query.prepare("INSERT INTO actions (action) VALUES (:action)");
-    query.bindValue(":action", actionText);
-
-    if (query.exec()) {
-        inputAction->clear();
-        model->select();
-    } else {
-        QMessageBox::critical(this, "ошибка", "не сохранилось" + query.lastError().text());
-    }
+void MainWindow::hideGeneratorWidget()
+{
+    tabWidget->setTabEnabled(0, false);
 }
 
-
 /**
- * @brief настраивает модель таблицы
+ * @brief отображение виджета генератора
  */
-void MainWindow::setupTableModel() {
-    if (!model) {
-        model = new QSqlTableModel(this);
-        model->setTable("actions");
-        model->setEditStrategy(QSqlTableModel::OnFieldChange);
-    }
-
-    tableView->setModel(model);
-    tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+void MainWindow::showGeneratorWidget()
+{
+    tabWidget->setCurrentIndex(0);
+    tabWidget->setTabEnabled(0, true);
 }
 
+/**
+ * @brief отображение виджета осциллографа
+ */
+void MainWindow::showOscilloscopeWidget()
+{
+    tabWidget->setCurrentIndex(1);
+    tabWidget->setTabEnabled(1, true);
+}
 
 /**
- * @brief отправка команды генератору и отображание ответа
+ * @brief обработчик нажатия кнопки подключения, проверка типа подключения и запуск статус чекера
  */
-void MainWindow::sendCommandToGenerator() {
-    responseOutput->clear();
-    VisaController visa;
+void MainWindow::onConnectionButtonClicked()
+{
+    QString str_typeOfConnection = typeOfConnectionEdit->text();
+    OscilloscopeManager oscManager;
+    QString oscilloscopeIP = oscManager.getIp();
 
-    QString command = commandInput->text().isEmpty() ? "*IDN?" : commandInput->text();
-    QString response = visa.sendCommand(command);
+    // подключение осциллографа
+    if (oscilloscopeIP == str_typeOfConnection)
+    {
+        StatusCheckerOsc *statusCheckerOsc = new StatusCheckerOsc(str_typeOfConnection);
+        statusCheckerOsc->start();
+        connect(statusCheckerOsc, &StatusCheckerOsc::connectionDetected, this, &MainWindow::showOscilloscopeWidget);
+        connect(statusCheckerOsc, &StatusCheckerOsc::connectionLost, this, &MainWindow::hideOscilloscopeWidget);
+    }
+    // подключение генератора
+    else if (str_typeOfConnection == "ASRL1::INSTR")
+    {
+        if (!generatorManager) {
+            generatorManager = new GeneratorManager();
+        }
 
-    if (response.isEmpty() && !command.contains("?")) {
-        responseOutput->setPlainText("Команда отправлена:)");
-    } else if (response.isEmpty()) {
-        responseOutput->setPlainText("Генератор не отвечает");
-    } else {
-        responseOutput->setPlainText("Ответ: " + response);
+        QString response = generatorManager->sendCommand("*IDN?");
+        if (!response.contains("Не удалось")) { // проверка успешного ответа
+            showGeneratorWidget();
+
+            if (!statusCheckerGen) {
+                statusCheckerGen = new StatusCheckerGen();
+                connect(statusCheckerGen, &StatusCheckerGen::connectionDetected, this, &MainWindow::showGeneratorWidget);
+                connect(statusCheckerGen, &StatusCheckerGen::connectionLost, this, &MainWindow::hideGeneratorWidget);
+                statusCheckerGen->start();
+            }
+        } else {
+            qDebug() << "Ошибка: " << response;
+        }
     }
 }
 
 /**
- * @brief обновление данных в таблице
+ * @brief открытие окна истории
  */
-void MainWindow::showAllActions() {
-    model->select();
+void MainWindow::openHistoryWindow()
+{
+    if (!historyWindow) {
+        historyWindow = new HistoryWindow();
+        historyWindow->setWindowTitle("История");
+        historyWindow->setAttribute(Qt::WA_DeleteOnClose);
+        connect(historyWindow, &HistoryWindow::destroyed, this, [this]() { historyWindow = nullptr; });
+    }
+    historyWindow->show();
 }

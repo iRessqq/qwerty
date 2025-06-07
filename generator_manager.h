@@ -1,18 +1,18 @@
 /**
- * @file visa_controller.h
+ * @file generat_manager.h
  * @brief заголовочный файл для работы с VISA
  */
 
-#ifndef VISA_CONTROLLER_H
-#define VISA_CONTROLLER_H
+#ifndef GENERATOR_MANAGER_H
+#define GENERATOR_MANAGER_H
 
 #include <QString>
 
 /**
- * @class VisaController
+ * @class GeneratorManager
  * @brief управление генератором
  */
-class VisaController {
+class GeneratorManager {
 public:
     /**
      * @brief отправка команды генератору
@@ -20,4 +20,4 @@ public:
     QString sendCommand(const QString &command);
 };
 
-#endif // VISA_CONTROLLER_H
+#endif // GENERATOR_MANAGER_H

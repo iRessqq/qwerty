@@ -1,17 +1,17 @@
 /**
- * @file visa_controller.cpp
- * @brief реализация visa_controller
+ * @file generator_manager.cpp
+ * @brief реализация generator_manager
  */
 
-#include "visa_controller.h"
+#include "generator_manager.h"
 #include <visa.h>
 
 /**
- * @brief VisaController управление генератором
+ * @brief GeneratorManager управление генератором
  * @param command команда генератору
  * @return ответ генератора
  */
-QString VisaController::sendCommand(const QString &command) {
+QString GeneratorManager::sendCommand(const QString &command) {
     ViSession defaultRM, instr;
     ViStatus status;
     QString response;
