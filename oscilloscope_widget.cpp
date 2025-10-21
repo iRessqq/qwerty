@@ -1,5 +1,6 @@
 #include "oscilloscope_widget.h"
 #include "oscilloscope_manager.h"
+#include "history_window.h"
 
 /**
  * @brief конструктор OscilloscopeWidget
@@ -55,10 +56,19 @@ void OscilloscopeWidget::sendMessage(QString &message)
     {
         oscilloscope.writeData(sockfd, message.toUtf8().data());
         oscilloscope.readData(sockfd, inbuf, sizeof(inbuf), MAX_TCP_READ);
+
+        QString reply = QString::fromLatin1(inbuf); //подумать над этим
         if (strlen(inbuf) != 0)
         {
-            text->appendPlainText(inbuf);
+            QString replyStr = QString::fromLatin1(inbuf).trimmed(); //осциллограф отвечает с пробелом в конце
+            text->appendPlainText(replyStr);
         }
+
+        HistoryWindow::logCommand(
+                    message,
+                    reply,
+                    QStringLiteral("Oscolloscope")
+                    );
         oscilloscope.disconnectFromScope(sockfd);
     }
 }

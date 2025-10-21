@@ -1,4 +1,5 @@
 #include "oscilloscope_manager.h"
+
 #include <QString>
 
 /**
@@ -141,25 +142,25 @@ int OscilloscopeManager::readData(int sockfd, char *buf, int len, int allowable_
                 printf("Размер буфера чтения слишком мал, минимум %d байт\n", LECROY_TCP_MINIMUM_PACKET_SIZE);
                 return -1;
             }
-result = read(sockfd, idxPtr, (bytes_more > 2048) ? 2048 : bytes_more);
-if (result < 0) {
-    disconnectFromScope(sockfd);
-    printf("Ошибка при получении данных\n");
-    return -1;
-}
+            result = read(sockfd, idxPtr, (bytes_more > 2048) ? 2048 : bytes_more);
+            if (result < 0) {
+                disconnectFromScope(sockfd);
+                printf("Ошибка при получении данных\n");
+                return -1;
+            }
 
-accum += result;
-if (accum >= header.iLength) break;
-if ((accum + buf_count) >= len) break;
-}
-buf_count += accum;
-space_left -= accum;
+            accum += result;
+            if (accum >= header.iLength) break;
+            if ((accum + buf_count) >= len) break;
+        }
+        buf_count += accum;
+        space_left -= accum;
 
-if (header.bEOI_Flag & LECROY_EOI_FLAG) break;
-if (space_left <= 0) break;
-}
+        if (header.bEOI_Flag & LECROY_EOI_FLAG) break;
+        if (space_left <= 0) break;
+    }
 
-return 0;
+    return 0;
 }
 
 /**

@@ -1,5 +1,6 @@
 #include "status_checker_osc.h"
 #include "oscilloscope_manager.h"
+
 #include <QDebug>
 
 /**
@@ -33,12 +34,12 @@ void StatusCheckerOsc::run()
             sockfd = oscilloscope.connectToScope(oscilloscopeIP.toUtf8().data(), MAX_TCP_CONNECT);
             if (sockfd > 0)
             {
-                qDebug() << "1";  // соединение установлено
+                //qDebug() << "1";  // соединение установлено
             }
             else
             {
                 emit connectionLost();  // сигнал о потере соединения
-                qDebug() << "2";
+                //qDebug() << "2";
                 oscilloscope.disconnectFromScope(sockfd);  // закрываем соединение
                 sockfd = -1;  // сбрасываем сокет
             }
@@ -52,13 +53,13 @@ void StatusCheckerOsc::run()
 
             if (strlen(inbuf) == 0)  // если нет ответа -соединение
             {
-                qDebug() << "3";
+                //qDebug() << "3";
                 emit connectionLost();  // -соединения
                 oscilloscope.disconnectFromScope(sockfd);  // закрываем соединение
             }
             else
             {
-                qDebug() << "4";
+                //qDebug() << "4";
                 emit connectionDetected();  // успешное подключении
                 oscilloscope.disconnectFromScope(sockfd);  // закрываем соединение
             }

@@ -1,21 +1,30 @@
 #ifndef HISTORY_WINDOW_H
 #define HISTORY_WINDOW_H
 
-#include <QWidget>
-#include <QSqlDatabase>
-#include <QSqlTableModel>
-#include <QTableView>
+#include <QVBoxLayout>
 #include <QLineEdit>
 #include <QPushButton>
-#include <QVBoxLayout>
+#include <QTableView>
+#include <QHeaderView>
 #include <QMessageBox>
 #include <QSqlQuery>
-#include <QSqlError>
-#include <QHeaderView>
+#include <QDir>
+#include <QApplication>
+#include <QFile>
+#include <QHBoxLayout>
+#include <QIcon>
+#include <QStandardItem>
+#include <QScrollBar>
+#include <QWidget>
+#include <QSqlDatabase>
+#include <QStandardItemModel>
+
+class QLineEdit;
+class QPushButton;
+class QTableView;
 
 /**
- * @class HistoryWindow
- * @brief окно истории действий оператора
+ * @brief окно истории команд и ответов
  */
 class HistoryWindow : public QWidget
 {
@@ -23,49 +32,73 @@ class HistoryWindow : public QWidget
 
 public:
     /**
-     * @brief конструктор HistoryWindow
+     * @brief конструктор
      * @param parent родительский виджет
      */
     explicit HistoryWindow(QWidget *parent = nullptr);
+    /**
+     * @brief Деструктор
+     */
+    ~HistoryWindow() override;
 
     /**
-     * @brief деструктор HistoryWindow
+     * @brief лог команд, ответа и прибора в бд
+     * @param cmd команда
+     * @param response ответ
+     * @param device прибор
      */
-    ~HistoryWindow();
+    static void logCommand(const QString &cmd,
+                           const QString &response,
+                           const QString &device);
 
 private slots:
     /**
-     * @brief сохраняет действие в бд
+     * @brief сохраняет введённую вручную команду
      */
     void saveToDb();
+
+    /**
+     * @brief обрабатка удаления записи по нажатию
+     */
+    void handleDeleteButton();
 
 private:
     /**
      * @brief соединение с бд
-     * @return true, если соединение успешно установлено, иначе false
+     * @return true - удалось, else false
      */
     bool connectToDb();
 
     /**
-     * @brief создание таблицы, если ее нет
+     * @brief создание бд, если её нет
      */
     void createTableIfNotExist();
 
     /**
-     * @brief настраивает модель таблицы
+     * @brief настраивает модель данных и вид таблицы
      */
-    void setupTableModel();
+    void setupModelAndView();
 
     /**
-     * @brief отображает все записи
+     * @brief обновляет содержимое таблицы из бд
      */
-    void showAllActions();
+    void refreshView();
 
-    QSqlDatabase db; ///< объект базы данных
-    QSqlTableModel *model; ///< модель для работы с таблицей
-    QTableView *tableView; ///< виджет для отображения истории действий
-    QLineEdit *inputAction; ///< поле для ввода нового действия
-    QPushButton *saveButton; ///< кнопка для сохранения
+    /**
+     * @brief подгон ширины окна под содержимое таблицы
+     */
+    void adjustWindowSize();
+
+    QSqlDatabase       db;          ///< соединение с бд
+    QStandardItemModel *model;      ///< модель для таблицы
+    QLineEdit          *inputAction;///< поле ввода команды
+    QPushButton        *saveButton; ///< кнопка сохранения
+    QTableView         *tableView;  ///< таблица истории
+
+    /**
+     * @brief общее соединение с бд для логирования
+     */
+    static QSqlDatabase& sharedDb();
 };
 
 #endif // HISTORY_WINDOW_H

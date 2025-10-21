@@ -1,4 +1,5 @@
 #include "status_checker_gen.h"
+
 #include <QThread>
 
 /**

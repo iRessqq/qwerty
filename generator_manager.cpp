@@ -4,6 +4,7 @@
  */
 
 #include "generator_manager.h"
+
 #include <visa.h>
 
 /**
@@ -23,7 +24,7 @@ QString GeneratorManager::sendCommand(const QString &command) {
     }
 
     // подключение через порт
-    status = viOpen(defaultRM, "ASRL1::INSTR", VI_NULL, VI_NULL, &instr);
+    status = viOpen(defaultRM, "ASRL33::INSTR", VI_NULL, VI_NULL, &instr);
     if (status != VI_SUCCESS) {
         viClose(defaultRM);
         return "Не удалось подключиться к генератору";

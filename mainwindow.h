@@ -17,6 +17,8 @@
 #include "history_window.h"
 #include "generator_manager.h"
 #include "status_checker_gen.h"
+#include "status_checker_stm.h"
+#include "stm_widget.h"
 
 /**
  * @class MainWindow
@@ -61,6 +63,11 @@ private:
     void showGeneratorWidget();
 
     /**
+     * @brief отображает вкладку платы
+     */
+    void showStmWidget();
+
+    /**
      * @brief скрывает вкладку осциллографа
      */
     void hideOscilloscopeWidget();
@@ -70,17 +77,26 @@ private:
      */
     void hideGeneratorWidget();
 
+    /**
+     * @brief скрывает вкладку платы
+     */
+    void hideStmWidget();
+
     QVBoxLayout *mainLayout; ///< основной макет главного окна
     QLabel *typeOfConnectionLabel; ///< метка для ввода типа подключения
     QLineEdit *typeOfConnectionEdit; ///< поле ввода для типа подключения
     QPushButton *connectionButton; ///< кнопка для установления соединения
     QTabWidget *tabWidget; ///< вкладки осциллографа и генератора
     QMenuBar *menuBar; ///< меню главного окна
+
     HistoryWindow *historyWindow; ///< окно истории действий
     OscilloscopeWidget *oscilloscopeWidget; ///< виджет осциллографа
-    GeneratorWidget *generatorWidget; ///< виджет генератора
+    GeneratorWidget *generatorWidget; ///< виджет генератора///< поток для проверки состояния генератора
+    StmWidget *stmWidget; ///< виджет платы
+
     GeneratorManager *generatorManager; ///< объект для управления генератором
     StatusCheckerGen *statusCheckerGen; ///< поток для проверки состояния генератора
+    StatusCheckerStm *statusCheckerStm; ///< поток для проверки состояния платы
 };
 
 #endif // MAINWINDOW_H
